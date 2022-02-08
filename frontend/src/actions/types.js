@@ -1,0 +1,7 @@
+
+export const FETCH_PRODUCTS = 'FETCH_PRODUCTS';
+export const LOADING_PRODUCTS = 'LOADING_PRODUCTS';
+export const NOT_FOUND_PRODUCT = 'NOT_FOUND_PRODUCT';
+
+
+
