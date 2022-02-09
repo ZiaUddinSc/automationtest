@@ -4,7 +4,10 @@ import CircularProgress from "@material-ui/core/CircularProgress";
 import ReactPaginate from 'react-paginate';
 import { Modal, Button } from "react-bootstrap";
 import moment from 'moment'
+import Swal from 'sweetalert2'
+
 import DatePicker from "react-datepicker";
+import {rental_fee_calculation} from '../../constants/CustomMethod'
 
 import "react-datepicker/dist/react-datepicker.css";
 
@@ -52,6 +55,9 @@ state = {
     return_product_id:"",
     show: false,
     retrunshow:false,
+    need_reapir:false,
+    mileage:0,
+    search:""
     
     
 
@@ -80,11 +86,27 @@ handleDateChange(value, e) {
 handleToDateChange(value, e) {
     this.setState({ to_date: value });
 }
-
-onChangeReturn = (e) => {
-    this.setState({return_product_id:e.target.value})
+onSubmit = e => {
+    e.preventDefault();
+  
+    if(this.state.search!=''){
+        // alert(this.state.search)
+        this.props.searchProducts(this.state.search)
 }
 
+};
+onChange = e => this.setState({ [e.target.name]: e.target.value });
+onChangeReturn = (e) => {
+    let value=e.target.value
+    
+    let result = this.props.products.find(product => product.id ===parseInt(value));
+    this.setState({return_product_id:value,need_reapir:result.needing_repair,mileage:result.mileage})
+}
+onPressReturn(){
+    let result = this.props.products.find(product => product.id ===parseInt(this.state.return_product_id));
+    this.openreturnsweetalert({'price':result.price,'repair':result.needing_repair})
+    this.setState({retrunshow:false}) 
+}
 onChangeBook = (e) => {
     this.setState({book_product_id:e.target.value})
 }
@@ -93,7 +115,7 @@ onChangeBook = (e) => {
 componentDidUpdate(prevProps, prevState){
     if (prevProps.products !== this.props.products){
         if(this.props.products.length>0){
-        this.setState({book_product_id:this.props.products[0].id,return_product_id:this.props.products[0].id})
+        this.setState({book_product_id:this.props.products[0].id,return_product_id:this.props.products[0].id,need_reapir:this.props.products[0].needing_repair,mileage:this.props.products[0].mileage})
         }
     }
    
@@ -105,12 +127,80 @@ getBookData(){
     let from_date=this.state.from_date
     let to_date=this.state.to_date
     let result = this.props.products.find(product => product.id ===parseInt(this.state.book_product_id));
-    alert(JSON.stringify(result))
+    let price=rental_fee_calculation(from_date,to_date,result)
+    this.opensweetalert({'price':price})
+    this.setState({show:false})
 }
 
+opensweetalert(data) {
 
+    Swal.fire({
+        title: 'Book a product',
+        html: "Your Estimated Price "+data.price+'<br/> '+' Do you want to procedure',
+        type: 'warning',
+        showCancelButton: true,
+        cancelButtonText: 'No',
+        confirmButtonColor: '#3085d6',
+        cancelButtonColor: '#d33',
+        confirmButtonText: 'Yes'
+    }).then((result) => {
+        if (result.value) {
+            if (data.price>0) {
+              //  this.props.deleteProduct(data.id)
+                //alert(JSON.stringify(result))
+                Swal.fire(
+                    'Yes!',
+                    'Thank You',
+                    'success'
+                )
+            }else if(data.price==0){
+                 Swal.fire(
+                    'Not Book',
+                    'Thank You',
+                    'warn'
+                )
+            }else{
+                Swal.fire(
+                   'Cancel',
+                   'Thank You',
+                   'warn'
+               )
+           }
+        }
+    })
+}
 
+openreturnsweetalert(data) {
 
+    Swal.fire({
+        title: 'Return a product',
+        html: "Your Estimated Price "+data.price+'<br/> '+' Do you want to procedure',
+        type: 'warning',
+        showCancelButton: true,
+        cancelButtonText: 'No',
+        confirmButtonColor: '#3085d6',
+        cancelButtonColor: '#d33',
+        confirmButtonText: 'Yes'
+    }).then((result) => {
+        if (result.value) {
+            if (data.repair) {
+              //  this.props.deleteProduct(data.id)
+                //alert(JSON.stringify(result))
+                Swal.fire(
+                    'Yes!',
+                    'You are able to Repair',
+                    'success'
+                )
+            }else{
+                Swal.fire(
+                    'No!',
+                    'You are not able to Repair',
+                    'success'
+                )
+            }
+        }
+    })
+}
 
 
 
@@ -179,8 +269,8 @@ render() {
                                         onChange={this.onChange} placeholder="Product Name"
                                         aria-label="Search" /> */}
                                     
-                                    <input className="form-control mr-sm-3" name="vendor__shop_name" type="text"
-                                            placeholder="Search"
+                                    <input className="form-control mr-sm-3" name="search" type="text"
+                                            placeholder="Search" onChange={this.onChange}
                                         aria-label="Search" />
                                     <button onClick={this.onSubmit} className="btn btn-outline-info my-4 my-sm-0 float-right"
                                         type="submit"><i className="fas fa-search"></i> Search
@@ -216,7 +306,7 @@ render() {
                                             </td>
                                         </tr>
                                         : products.length >0 && products.length != undefined && products.map((product, index) => (
-                                            <tr key={product.id}>
+                                            <tr key={index}>
 
                                                 
                                                 
@@ -231,10 +321,15 @@ render() {
                                         ))}
                                 </tbody>
                             </table>
+                           
+                            {products.length>0?
+
                             <div className="text-align:right">
                                 <button type="button" onClick={()=>this.handleModalShow()} className="btn btn-primary">Book</button>
                                 <button type="button"  onClick={()=>this.handleReturnModalShow()} className="btn btn-success">Return</button>
                             </div>
+                            :null
+                            }
                         </div>
                         
                         <div className="card-footer clearfix">
@@ -250,7 +345,7 @@ render() {
                                         pageCount={page}
                                         marginPagesDisplayed={2}
                                         pageRangeDisplayed={5}
-                                        onPageChange={this.handlePageClick}
+                                        onPageChange={this.props.handlePageClick(page)}
                                         containerClassName={'pagination'}
                                         subContainerClassName={'pages pagination'}
                                         activeClassName={'active'}
@@ -282,9 +377,14 @@ render() {
                         </select>
                         </div>
                         <div className="col-md-6">
-                        <label>Used Mileage</label>
+                        <label>{this.state.need_reapir?'Needed repair':'Not Needed to repair'}</label>
 
                         </div>
+                        <div className="col-md-6">
+                        <label>{this.state.mileage>0 ? 'Used Mileage':'Unused Mileage'}</label>
+
+                        </div>
+                        
 
                             </Modal.Body>
 
@@ -292,7 +392,7 @@ render() {
                                 <Button variant="secondary" onClick={()=>this.handleReturnClose()}>
                                     No
                                 </Button>
-                                <Button variant="primary" onClick={this.getDiscountData}>
+                                <Button variant="primary" onClick={()=>this.onPressReturn()}>
                                    Yes
                                 </Button>
                             </Modal.Footer>

@@ -1,5 +1,5 @@
 
-export const BASE_URL = 'http://192.168.0.100:8080';
+export const BASE_URL = 'http://192.168.0.104:8000';
 var version = "/api/v1/"
 
 export const LOGIN_URL = BASE_URL + '/api/auth/login/';

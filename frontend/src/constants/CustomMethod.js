@@ -1,6 +1,6 @@
 import React from 'react'
 import {CSVLink} from 'react-csv'
-
+import moment from 'moment';
 export const SearchURLGenerate = (parameters,search_key=[]) => {
 var  search_url='';
 var filter_params={}  
@@ -53,60 +53,67 @@ export const findArrayElementByTitle = (array, status) => {
     })
   }
 
-export const sumTotalAmount = (oderList) => {
-    let totalAmount=0
-    if(oderList.length>0){
-        totalAmount = oderList.map( ( product ) => {
-        return Number(product.subtotal);
-        } ).reduce( ( total, current ) => total += current );
-    }
-    //this.setState( {
-    //  totalAmount
-    //} );
-    return totalAmount;
-}
-    
-export const sumTotalQuantity= (oderList) => {
-    let totalQuantity=0
-    if(oderList.length>0){
-        totalQuantity = oderList.map( ( product ) => {
-        return Number(product.quantity);
-        } ).reduce( ( total, current ) => total += current );
-    }
-    //this.setState( {
-    //  totalAmount
-    //} );
-    return totalQuantity;
-}
-
-export const ExportReactCSV = ({csvData, fileName}) => {
-    return (
-            <button className='btn btn-info'>
-                
-            <CSVLink className='text-white' data={csvData} filename={fileName}>Export</CSVLink>
-
-            </button>
+export const rental_fee_calculation = (from_date,to_date,data) => {
+    var totalFee=0.0,days=0,start,end;
+    if(from_date !='' && to_date!=''){
+         start = moment(from_date, "MM-DD-YYYY");
+         end = moment(to_date, "MM-DD-YYYY");
+        if(end>start){
+             days=end.diff(start, 'days')
         
-    )
-}
-
-
-export const durability_points = (DataList, ActionName,visibilityAction='') => {
-    var valid=false;
-    if(DataList.length>0){
-        let check = DataList.findIndex(o => o.content_type.app_label === ActionName);
-    
-        if(check>-1&visibilityAction!==''){
-            let visibledata = DataList.filter(o => o.content_type.app_label === ActionName);
-            var visibility=visibledata.findIndex(o => o.codename === visibilityAction)
-            if(visibility>-1){
-                valid=true;
-            }
-        }else if(check>-1&visibilityAction===''){
-            valid=true;
         }
     }
+    //Over the Minimum Rental Period discount will be added
+    //availabilty for discount
+    var discount_rate=0,minimum_rent_period=parseInt(data.minimum_rent_period),price=parseFloat(data.price)
+    
+    let durability=parseFloat(data.durability)/minimum_rent_period;
+    if(durability>0 && data.type===2){
+        durability=(durability+10)*days
+    }else{
+        durability=(durability)*days
+    }
+    data['durability']=durability
+    if(durability>0){
+        durability =durability_points(start,end,data)
+    }
+    if(parseFloat(data.max_durability)>=durability){
+        if(days>minimum_rent_period && data.availability && minimum_rent_period>0 ){
+            discount_rate=0.05
+            let fee=(price/minimum_rent_period)*days
+            let discount_price=fee*discount_rate;
+            totalFee=fee-discount_price
+        }else if(days>0 && days<=minimum_rent_period&& !data.availability && minimum_rent_period>0){
+            totalFee=(price/minimum_rent_period)*days
+        }
+    }
+    return totalFee;
+}
+    
 
-    return valid
+
+
+export const durability_points = (from_date,to_date,data) => {
+    var points=0.0,days=0;
+    if(from_date !='' && to_date!=''){
+        var start = moment(from_date, "MM-DD-YYYY");
+        var end = moment(to_date, "MM-DD-YYYY");
+        if(end>start){
+             days=end.diff(start, 'days')
+        
+        } 
+        if(days>0){
+            if(data.type==1){
+                points +=days*1
+            }else if(data.type==2){
+                points +=days*2
+                if(data.mileage>0 && data.mileage!==''){
+                    points+=.2*parseFloat(data.mileage)
+                }
+            }
+            
+        }
+    }
+    return points
      
 }
